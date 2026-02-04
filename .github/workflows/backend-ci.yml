@@ -26,10 +26,11 @@ jobs:
           pip install -r requirements.txt
           pip install pytest httpx
 
+      # ✅ Enable test mode (NO real LLM calls)
       - name: Create test env file
         run: |
           cd Backend-rag
-          echo "GROQ_API_KEY=dummy_test_key" > .env
+          echo "TESTING=true" > .env
 
       - name: Run backend tests
         run: |
