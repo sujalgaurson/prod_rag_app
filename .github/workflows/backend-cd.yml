@@ -1,0 +1,33 @@
+name: Backend CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t backend-rag ./Backend-rag
+
+      - name: Save SSH key
+        run: |
+          echo "${{ secrets.SSH_KEY }}" > ssh_key
+          chmod 600 ssh_key
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ssh_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            docker stop backend-rag || true
+            docker rm backend-rag || true
+            docker build -t backend-rag ~/backend-rag || true
+            docker run -d -p 8000:8000 \
+              --env GROQ_API_KEY=${{ secrets.GROQ_API_KEY }} \
+              --name backend-rag backend-rag
+          EOF
