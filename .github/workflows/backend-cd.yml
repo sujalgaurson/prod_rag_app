@@ -5,29 +5,52 @@ on:
     branches: [ main ]
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: |
-          docker build -t backend-rag ./Backend-rag
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Save SSH key
+      - name: Build and Push Backend
         run: |
-          echo "${{ secrets.SSH_KEY }}" > ssh_key
-          chmod 600 ssh_key
+          # Matches your folder structure: ./Backend-rag
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/rag-backend:latest ./Backend-rag
+          docker push ${{ secrets.DOCKER_USERNAME }}/rag-backend:latest
 
-      - name: Deploy to EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no -i ssh_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            docker stop backend-rag || true
-            docker rm backend-rag || true
-            docker build -t backend-rag ~/backend-rag || true
-            docker run -d -p 8000:8000 \
-              --env GROQ_API_KEY=${{ secrets.GROQ_API_KEY }} \
-              --name backend-rag backend-rag
-          EOF
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Copy docker-compose via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "~/backend-rag/"
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ~/backend-rag
+            # Create the .env file on the fly from your GitHub Secrets
+            echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" > .env
+            
+            # Login to Docker Hub on EC2
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+            
+            # Set the image variable and restart the service
+            export BACKEND_IMAGE=${{ secrets.DOCKER_USERNAME }}/rag-backend:latest
+            docker-compose pull backend
+            docker-compose up -d backend

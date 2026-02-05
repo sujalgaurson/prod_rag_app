@@ -1,6 +1,6 @@
 services:
   backend:
-    image: rag-backend:latest
+    image: ${BACKEND_IMAGE:-rag-backend:latest}
     build:
       context: ./Backend-rag
       dockerfile: Dockerfile
@@ -11,25 +11,11 @@ services:
       - ENV=production
       - PYTHONUNBUFFERED=1
     env_file:
-      - ./Backend-rag/.env
+      - .env
     restart: always
+    # IMPORTANT: Ensure your FastAPI app has an @app.get("/health") route!
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-
-  frontend:
-    image: rag-frontend:latest
-    build:
-      context: ./cursor
-      dockerfile: Dockerfile
-    container_name: rag-frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=http://backend:8000
-    depends_on:
-      - backend
-    restart: always
