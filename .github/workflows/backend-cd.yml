@@ -58,6 +58,7 @@ jobs:
             
             # Set the image variable and restart the service
             export BACKEND_IMAGE=${{ secrets.DOCKER_USERNAME }}/rag-backend:latest
+            docker-compose down --remove-orphans
             docker-compose pull backend
-            docker-compose up -d --force-recreate backend
+            docker-compose up -d backend
             
