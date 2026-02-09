@@ -1,7 +1,13 @@
 // const API_BASE = "http://localhost:8000"
-// Instead of http://localhost:8000
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://13.60.186.81:8000";
+// Instead of http://localhost:8000
+// const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://13.60.186.81:8000"; 
+
+// The browser will now call https://your-site.vercel.app/api/...
+// Vercel will then forward this to your EC2 http://13.60.186.81:8000/...
+const API_BASE = "/api";
+
+
 
 export async function uploadFile(file: File) {
   const formData = new FormData()
