@@ -9,6 +9,10 @@ on:
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
+    # This ensures every 'run' command starts inside your subfolder
+    defaults:
+      run:
+        working-directory: Backend-rag
 
     steps:
       - name: Checkout repository
@@ -21,18 +25,13 @@ jobs:
 
       - name: Install backend dependencies
         run: |
-          cd Backend-rag
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest httpx
 
-      # ✅ Enable test mode (NO real LLM calls)
       - name: Create test env file
-        run: |
-          cd Backend-rag
-          echo "TESTING=true" > .env
+        run: echo "TESTING=true" > .env
 
       - name: Run backend tests
-        run: |
-          cd Backend-rag
-          pytest -v
+        # ✅ 'PYTHONPATH=.' tells Python to treat the current folder as a package source
+        run: PYTHONPATH=. pytest -v
