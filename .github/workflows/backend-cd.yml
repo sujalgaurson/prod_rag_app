@@ -38,6 +38,9 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           source: "./docker-compose.yml"
           target: "~/backend-rag/"
+          # Add this to give the connection more time
+          timeout: 60s
+          command_timeout: 10m
 
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -56,4 +59,5 @@ jobs:
             # Set the image variable and restart the service
             export BACKEND_IMAGE=${{ secrets.DOCKER_USERNAME }}/rag-backend:latest
             docker-compose pull backend
-            docker-compose up -d backend
+            docker-compose up -d --force-recreate backend
+            
